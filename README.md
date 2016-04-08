@@ -1,4 +1,4 @@
-# Richard-Code-Club-Projects
+# codeclub respository README
 
 Some simple projects which might prove useful in Code Club sessions.
 
