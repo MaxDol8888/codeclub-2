@@ -21,6 +21,8 @@ class Display(Tkinter.Tk):
     digit_height = 150
     border = 5
 
+    max_digits = 10
+
 
     # Class representing a single digit in a 7-segment display.
     class Digit():
@@ -124,15 +126,21 @@ class Display(Tkinter.Tk):
         # Initialization just creates a blank display.
         Tkinter.Tk.__init__(self)
         self.title("Seven Segment Display")
-        self.canvas = Tkinter.Canvas(self, width=(self.digit_width*num_digits + 2*self.border), height=(self.digit_height + 2*self.border), borderwidth=0, highlightthickness=0, background=self.bgcolor)
 
-        # Create a line of digits with a border above and to the left.
-        self.digits = []
-        for ii in range(num_digits):
-            new_digit = self.Digit(self.border + ii*self.digit_width, self.border, self.digit_width, self.digit_height, self.linecolor, self.oncolor, self.offcolor)
-            self.digits.append(new_digit)
+        try:
+            num_digits = min(num_digits, self.max_digits)
+            num_digits = max(num_digits, 1)
+            self.canvas = Tkinter.Canvas(self, width=(self.digit_width*num_digits + 2*self.border), height=(self.digit_height + 2*self.border), borderwidth=0, highlightthickness=0, background=self.bgcolor)
 
-        self.redraw()
+            # Create a line of digits with a border above and to the left.
+            self.digits = []
+            for ii in range(num_digits):
+                new_digit = self.Digit(self.border + ii*self.digit_width, self.border, self.digit_width, self.digit_height, self.linecolor, self.oncolor, self.offcolor)
+                self.digits.append(new_digit)
+
+            self.redraw()
+        except:
+            print("You tried something silly")
 
     def redraw(self):
         # Clear the canvas and redraw each digit.
@@ -150,13 +158,50 @@ class Display(Tkinter.Tk):
     # Examples: set(0)
     #           set(0b00000110, 0b01011011)
     def set(self, *args):
-        arglist = list(args)
-        for digit, value in zip(self.digits, arglist):
-            digit.set(value)
-        self.redraw()
+        try:
+            arglist = list(args)
+            for digit, value in zip(self.digits, arglist):
+                digit.set(value)
+            self.redraw()
+        except:
+            print("You did something silly")
+
+    # A cheater's way to make a display show a number.  If the display isn't
+    # big enough then it will only show the lowest-order digits.
+    def show_number(self, number):
+        # Have a helper array of the bit-patterns for each digit.
+        numbers = [0b00111111, # 0
+            0b00000110,        # 1
+            0b01011011,        # 2
+            0b01001111,        # 3
+            0b01100110,        # 4
+            0b01101101,        # 5
+            0b01111101,        # 6
+            0b00000111,        # 7
+            0b01111111,        # 8
+            0b01101111]        # 9
+
+        try:
+            # Start by blanking all digits except the last, which is a zero.
+            for ii in range(len(self.digits)):
+                self.digits[ii].set(0)
+            self.digits[len(self.digits)-1].set(numbers[0])
+
+            number = int(number)
+            dig_pos = len(self.digits)
+            values_to_set = []
+            while number > 0 and dig_pos > 0:
+                dig_pos = dig_pos - 1
+                self.digits[dig_pos].set(numbers[number % 10])
+                number = number / 10
+            self.redraw()
+
+        except:
+            print("You did something silly")
+
 
     # demo()
-    # Do a demo of the display, Showing the word "Hello" scrolling on and off
+    # Do a demo of the display, Showing the word "HELLO" scrolling on and off
     # Params: none.
     def demo(self):
         self.set(0,0,0,0,0b01110110)
