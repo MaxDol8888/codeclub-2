@@ -160,7 +160,18 @@ class Display(Tkinter.Tk):
     def set(self, *args):
         try:
             arglist = list(args)
-            for digit, value in zip(self.digits, arglist):
+
+            # Before setting new values, clear the existing values for each
+            # digit.
+            for digit in self.digits:
+                digit.set(0)
+
+            # Make sure we set the lowest-order digits in the display.
+            num_digits_to_set = min(len(self.digits), len(arglist))
+            digits_to_set = self.digits[num_digits_to_set * -1:]
+
+            # Now set the digits according to the passed in arguments
+            for digit, value in zip(digits_to_set, arglist):
                 digit.set(value)
             self.redraw()
         except:
@@ -204,13 +215,13 @@ class Display(Tkinter.Tk):
     # Do a demo of the display, Showing the word "HELLO" scrolling on and off
     # Params: none.
     def demo(self):
-        self.set(0,0,0,0,0b01110110)
+        self.set(0b01110110)
         time.sleep(0.25)
-        self.set(0,0,0,0b01110110,0b01111001)
+        self.set(0b01110110,0b01111001)
         time.sleep(0.25)
-        self.set(0,0,0b01110110,0b01111001,0b00111000)
+        self.set(0b01110110,0b01111001,0b00111000)
         time.sleep(0.25)
-        self.set(0,0b01110110,0b01111001,0b00111000,0b00111000)
+        self.set(0b01110110,0b01111001,0b00111000,0b00111000)
         time.sleep(0.25)
         self.set(0b01110110,0b01111001,0b00111000,0b00111000,0b00111111)
         time.sleep(2)
