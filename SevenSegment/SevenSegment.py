@@ -16,16 +16,16 @@ class Display(Tkinter.Tk):
     oncolor = '#00FF00'
     offcolor = '#111111'
 
-    # Set up size of each digit and the border around them (pixels).
-    digit_width = 100
-    digit_height = 150
+    # Set up size of each cell and the border around them (pixels).
+    cell_width = 100
+    cell_height = 150
     border = 5
 
-    max_digits = 10
+    max_cells = 10
 
 
-    # Class representing a single digit in a 7-segment display.
-    class Digit():
+    # Class representing a single cell in a 7-segment display.
+    class Cell():
 
         class Segment():
 
@@ -90,9 +90,9 @@ class Display(Tkinter.Tk):
         def __init__(self, x_pos, y_pos, width, height, line_color, on_color, off_color):
             self.bitflags = 0
 
-            # Create the digit's segments, giving them each coordinates for
+            # Create the cell's segments, giving them each coordinates for
             # their polygons as a list of x,y pairs where the coordinate assume
-            # a digit 100 pixels wide and 150 high.  The segments will scale
+            # a cell 100 pixels wide and 150 high.  The segments will scale
             # appropriately based on the actual width and height.
             self.segments = []
             self.segments.append(self.Segment(0b00000001, x_pos, y_pos, width, height, [(17,0),(65,0),(73,8),(65,16),(17,16),(9,8)], line_color, on_color, off_color))
@@ -107,7 +107,7 @@ class Display(Tkinter.Tk):
         def set(self, bitflags = 0):
             self.bitflags = bitflags
 
-            # Loop through the digit's segments, setting them on or off based
+            # Loop through the cell's segments, setting them on or off based
             # on the bitflags.
             for segment in self.segments:
                 if bitflags & segment.flag_value:
@@ -120,40 +120,40 @@ class Display(Tkinter.Tk):
             for segment in self.segments:
                 segment.draw(canvas)
 
-        # END class Digit
+        # END class Cell
 
-    def __init__(self, num_digits=1):
+    def __init__(self, num_cells=1):
         # Initialization just creates a blank display.
         Tkinter.Tk.__init__(self)
         self.title("Seven Segment Display")
 
         try:
-            num_digits = min(num_digits, self.max_digits)
-            num_digits = max(num_digits, 1)
-            self.canvas = Tkinter.Canvas(self, width=(self.digit_width*num_digits + 2*self.border), height=(self.digit_height + 2*self.border), borderwidth=0, highlightthickness=0, background=self.bgcolor)
+            num_cells = min(num_cells, self.max_cells)
+            num_cells = max(num_cells, 1)
+            self.canvas = Tkinter.Canvas(self, width=(self.cell_width*num_cells + 2*self.border), height=(self.cell_height + 2*self.border), borderwidth=0, highlightthickness=0, background=self.bgcolor)
 
-            # Create a line of digits with a border above and to the left.
-            self.digits = []
-            for ii in range(num_digits):
-                new_digit = self.Digit(self.border + ii*self.digit_width, self.border, self.digit_width, self.digit_height, self.linecolor, self.oncolor, self.offcolor)
-                self.digits.append(new_digit)
+            # Create a line of cells with a border above and to the left.
+            self.cells = []
+            for ii in range(num_cells):
+                new_cell = self.Cell(self.border + ii*self.cell_width, self.border, self.cell_width, self.cell_height, self.linecolor, self.oncolor, self.offcolor)
+                self.cells.append(new_cell)
 
             self.redraw()
         except:
             print("You tried something silly")
 
     def redraw(self):
-        # Clear the canvas and redraw each digit.
+        # Clear the canvas and redraw each cell.
         self.canvas.delete("all")
-        for digit in self.digits:
-            digit.draw(self.canvas)
+        for cell in self.cells:
+            cell.draw(self.canvas)
         self.canvas.pack()
         self.update()
 
 
     # set()
     # Sets which segments of the display are lit.
-    # Params: Variable number of integers indicating what each digit should
+    # Params: Variable number of integers indicating what each cell should
     #         display.
     # Examples: set(0)
     #           set(0b00000110, 0b01011011)
@@ -162,17 +162,17 @@ class Display(Tkinter.Tk):
             arglist = list(args)
 
             # Before setting new values, clear the existing values for each
-            # digit.
-            for digit in self.digits:
-                digit.set(0)
+            # cell.
+            for cell in self.cells:
+                cell.set(0)
 
-            # Make sure we set the lowest-order digits in the display.
-            num_digits_to_set = min(len(self.digits), len(arglist))
-            digits_to_set = self.digits[num_digits_to_set * -1:]
+            # Make sure we set the right-most cells in the display.
+            num_cells_to_set = min(len(self.cells), len(arglist))
+            cells_to_set = self.cells[num_cells_to_set * -1:]
 
-            # Now set the digits according to the passed in arguments
-            for digit, value in zip(digits_to_set, arglist):
-                digit.set(value)
+            # Now set the cells according to the passed in arguments
+            for cell, value in zip(cells_to_set, arglist):
+                cell.set(value)
             self.redraw()
         except:
             print("You did something silly")
@@ -194,14 +194,14 @@ class Display(Tkinter.Tk):
         # size of the display so that scrolling starts and finishes with a
         # blank display.
         blanks = []
-        for ii in range(len(self.digits)):
+        for ii in range(len(self.cells)):
             blanks.append(0)
         sequence.extend(blanks)
         sequence[:0] = blanks
 
         # Now display the message one chunk at a time.
-        for ii in range(1 + len(sequence) - len(self.digits)):
-            self.set(*sequence[ii:ii+len(self.digits)])
+        for ii in range(1 + len(sequence) - len(self.cells)):
+            self.set(*sequence[ii:ii+len(self.cells)])
             time.sleep(delay)
 
 
@@ -221,17 +221,17 @@ class Display(Tkinter.Tk):
             0b01101111]        # 9
 
         try:
-            # Start by blanking all digits except the last, which is a zero.
-            for ii in range(len(self.digits)):
-                self.digits[ii].set(0)
-            self.digits[len(self.digits)-1].set(numbers[0])
+            # Start by blanking all cells except the last, which is a zero.
+            for ii in range(len(self.cells)):
+                self.cells[ii].set(0)
+            self.cells[len(self.cells)-1].set(numbers[0])
 
             number = int(number)
-            dig_pos = len(self.digits)
+            dig_pos = len(self.cells)
             values_to_set = []
             while number > 0 and dig_pos > 0:
                 dig_pos = dig_pos - 1
-                self.digits[dig_pos].set(numbers[number % 10])
+                self.cells[dig_pos].set(numbers[number % 10])
                 number = number / 10
             self.redraw()
 
