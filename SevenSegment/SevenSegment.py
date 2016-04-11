@@ -177,6 +177,34 @@ class Display(Tkinter.Tk):
         except:
             print("You did something silly")
 
+    # scroll()
+    # Scroll a sequence across the display from right to left.
+    # Params: sequence - List of integers which make up the "message" to scroll
+    #                    across the display.
+    #         delay    - The delay, in seconds, between movements.
+    def scroll(self, sequence, delay=0.5):
+        # Put a load of 'blank' entries at either end of the passed in
+        # sequence so that we get something like this.
+        #
+        #    | | | | | |s|e|q|u|e|n|c|e| | | | | |
+        #
+        # We can then display a chunk of that at a time to make the
+        # "sequence" bit appear to scroll.
+        # The number of blanks we need at either end needs to match the
+        # size of the display so that scrolling starts and finishes with a
+        # blank display.
+        blanks = []
+        for ii in range(len(self.digits)):
+            blanks.append(0)
+        sequence.extend(blanks)
+        sequence[:0] = blanks
+
+        # Now display the message one chunk at a time.
+        for ii in range(1 + len(sequence) - len(self.digits)):
+            self.set(*sequence[ii:ii+len(self.digits)])
+            time.sleep(delay)
+
+
     # A cheater's way to make a display show a number.  If the display isn't
     # big enough then it will only show the lowest-order digits.
     def show_number(self, number):
@@ -215,30 +243,11 @@ class Display(Tkinter.Tk):
     # Do a demo of the display, Showing the word "HELLO" scrolling on and off
     # Params: none.
     def demo(self):
-        self.set(0b01110110)
-        time.sleep(0.25)
-        self.set(0b01110110,0b01111001)
-        time.sleep(0.25)
-        self.set(0b01110110,0b01111001,0b00111000)
-        time.sleep(0.25)
-        self.set(0b01110110,0b01111001,0b00111000,0b00111000)
-        time.sleep(0.25)
-        self.set(0b01110110,0b01111001,0b00111000,0b00111000,0b00111111)
-        time.sleep(2)
-        self.set(0b01111001,0b00111000,0b00111000,0b00111111,0)
-        time.sleep(0.25)
-        self.set(0b00111000,0b00111000,0b00111111,0,0)
-        time.sleep(0.25)
-        self.set(0b00111000,0b00111111,0,0,0)
-        time.sleep(0.25)
-        self.set(0b00111111,0,0,0,0)
-        time.sleep(0.25)
-        self.set(0,0,0,0,0)
-        time.sleep(1)
+        self.scroll([0b01110110,0b01111001,0b00111000,0b00111000,0b00111111], 0.2)
 
 
 def main ():
-    disp = Display(5)
+    disp = Display(8)
     disp.demo()
 
 if __name__ == '__main__':
