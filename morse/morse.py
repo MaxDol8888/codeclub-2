@@ -6,7 +6,7 @@
 import subprocess
 import socket
 import select
-import sys
+import time
 
 class wire():
 
@@ -25,6 +25,7 @@ class wire():
 
     def __init__(self, role):
         self.localip = self.get_local_ip()
+        self.connected = False
         print "Your address is %s" % self.localip
         self.remoteip = raw_input("Please enter the other person's address: ")
 
@@ -40,23 +41,23 @@ class wire():
         self.buzzer_state = self.OFF
 
     def connect(self):
-        if self.role == self.SERVER:
-            self.start_server()
-        else:
-            self.start_client()
-
-
+        if not self.connected:
+            if self.role == self.SERVER:
+                self.start_server()
+            else:
+                self.start_client()
 
     def start_server(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (self.localip, 10000)
-        print >>sys.stderr, 'starting up on %s port %s' % server_address
         self.sock.bind(server_address)
         self.sock.listen(1)
 
         # Wait for a connection
-        print >>sys.stderr, 'waiting for a connection'
+        print 'Waiting for the other end to connect'
         self.connection, self.client_address = self.sock.accept()
+        print 'Connected!'
+        self.connected = True
 
     def start_client(self):
         # Create a TCP/IP socket
@@ -64,10 +65,22 @@ class wire():
 
         # Connect the socket to the port where the server is listening
         server_address = (self.remoteip, 10000)
-        print >>sys.stderr, 'connecting to %s port %s' % server_address
-        self.sock.connect(server_address)
-        self.connection = self.sock
+        print 'Connecting to the other end...'
 
+        while not self.connected:
+            try:
+                self.sock.connect(server_address)
+                self.connected = True
+            except socket.error, v:
+                errorcode = v[0]
+                if errorcode == socket.errno.ECONNREFUSED:
+                    print '...waiting for the other end to start up...'
+                    time.sleep(5)
+                else:
+                    raise
+
+        print 'Connected!'
+        self.connection = self.sock
 
     def my_button(self, state):
         if state != self.button_state:
@@ -75,12 +88,17 @@ class wire():
             try:
                 # Send data
                 message = "%s" % self.button_state
-                print >>sys.stderr, 'sending "%s"' % message
                 self.connection.sendall(message)
+            except socket.error:
+                print 'Connection lost - retrying.'
+                self.connected = False
+                try:
+                    self.sock.close()
+                finally:
+                    self.connect()
             except:
-                print >>sys.stderr, 'closing socket'
-                self.sock.close()
-
+                self.connected = False
+                raise
 
     def my_buzzer(self):
         try:
@@ -88,9 +106,16 @@ class wire():
             if ready[0]:
                 data = self.connection.recv(4096)
                 self.buzzer_state = data[-1:]
+        except socket.error:
+            print 'Connection lost - retrying.'
+            self.connected = False
+            try:
+                self.sock.close()
+            finally:
+                self.connect()
         except:
-            print >>sys.stderr, 'closing socket'
-            self.sock.close()
+            self.connected = False
+            raise
 
         if self.buzzer_state == "1":
             return True
