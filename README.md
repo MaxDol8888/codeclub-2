@@ -14,3 +14,20 @@ SevenSegment.py - A visual seven-segment display with a very simple interface to
                                             # illuminated in a given digit.  Just specify as many vals as there are
                                             # digits in your display.
                   
+morse.py -  Set up a rudimentary Morse Code station which can connect to another station on
+            a friend's computer.  Intended for use with Raspberry Pi, with a each person's
+            Pi having a simple pair of circuits: one with a switch connection to a GPIO input
+            and one with a buzzer connected to a GPIO output.  Press your switch and make the
+            other person's buzzer go off.
+           
+            To use it in another Python project (very basic example):
+           
+            from morse import wire
+            w = wire()
+            w.connect()  # At this point you'll be told your IP address and prompted to enter
+                         # the other person's IP address.
+            # Tell the other end they should buzz.
+            w.my_button(wire.PRESSED)
+            # Check if my buzzer should be going.
+            if w.my_buzzer():
+                # Use GPIO to turn on my buzzer.
