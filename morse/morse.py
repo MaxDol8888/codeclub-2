@@ -8,6 +8,7 @@ import socket
 import select
 import time
 
+
 class wire():
 
     PRESSED = "1"
@@ -16,30 +17,44 @@ class wire():
     OFF = "0"
     SERVER = 1
     CLIENT = 2
+    UNSPECIFIED = 3
 
+    # Gets the local IP address of the system.  Assumes there's only 1 IPv4
+    # address which isn't the loopback address, and it only works with IPv4.
     def get_local_ip(self):
-        output = subprocess.check_output('ip addr show | grep "inet " | grep -v "127.0.0.1"', shell=True)
+        # Run the native "ip addr show" command and parse the output to find
+        # the system's IP address.
+        output = subprocess.check_output(
+            'ip addr show | grep "inet " | grep -v "127.0.0.1"',
+            shell=True)
         prefix = output.split()[1]
         ipaddr = prefix.split('/')[0]
         return ipaddr
 
-    def __init__(self, role):
+    def __init__(self, role=UNSPECIFIED):
         self.localip = self.get_local_ip()
         self.connected = False
         print "Your address is %s" % self.localip
         self.remoteip = raw_input("Please enter the other person's address: ")
 
-        # Arbitrarily choose who's going to be client and server in the pair.
-        # Just trust that people will pair up correctly, entering their
-        # respective IP addresses.
+        if role == self.UNSPECIFIED:
+            # The user hasn't specified which role they want, so arbitrarily
+            # choose who's going to be client and server by comparing the IP
+            # addresses.
+            #
+            # You might want to specify the role if, for example, your doing
+            # some testing and you want client and server roles on the same
+            # system, with the same IP address
+            if self.remoteip < self.localip:
+                role = self.SERVER
+            else:
+                role = self.CLIENT
         self.role = role
-        # if self.remoteip < self.localip:
-        #     self.role = self.SERVER
-        # else:
-        #     self.role = self.CLIENT
+
         self.button_state = self.RELEASED
         self.buzzer_state = self.OFF
 
+    # Connect to the other end.
     def connect(self):
         if not self.connected:
             if self.role == self.SERVER:
@@ -47,7 +62,9 @@ class wire():
             else:
                 self.start_client()
 
+    # Start the connection, acting as server.
     def start_server(self):
+        # Create and bind a listen socket.
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (self.localip, 10000)
         self.sock.bind(server_address)
@@ -59,14 +76,17 @@ class wire():
         print 'Connected!'
         self.connected = True
 
+    # Start the connection, acting as client.
     def start_client(self):
-        # Create a TCP/IP socket
+        # Connect a socket and attempt to connect to the server.
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        # Connect the socket to the port where the server is listening
         server_address = (self.remoteip, 10000)
         print 'Connecting to the other end...'
 
+        # Keep trying until connected.  If the other end refuses the connection
+        # then that probably means the other end just hasn't started up yet, so
+        # wait and try again.  Any other exceptions (e.g. the other end isn't
+        # routable) should be re-raised.
         while not self.connected:
             try:
                 self.sock.connect(server_address)
@@ -78,15 +98,22 @@ class wire():
                     time.sleep(5)
                 else:
                     raise
+            except:
+                raise
 
         print 'Connected!'
         self.connection = self.sock
 
+    # Function for the user code to call to tell us the state of its button.
+    # Sends a signal to the other end whenever the button state changes.
     def my_button(self, state):
         if state != self.button_state:
             self.button_state = state
+            # Attempt to send a message consisting of an ASCII digit to
+            # represent the button state.  In the event of socket failure we
+            # should attempt to reconnect, but other exceptions (e.g. the user
+            # trying to kill the program with Ctrl-C) should be raised.
             try:
-                # Send data
                 message = "%s" % self.button_state
                 self.connection.sendall(message)
             except socket.error:
@@ -100,8 +127,11 @@ class wire():
                 self.connected = False
                 raise
 
+    # Function for the user code to read the required state of their buzzer.
+    # Reads from the socket if there's anything to be read.
     def my_buzzer(self):
         try:
+            # Test whether there's anything to read - give it 20ms.
             ready = select.select([self.connection], [], [], 0.05)
             if ready[0]:
                 data = self.connection.recv(4096)
@@ -117,7 +147,7 @@ class wire():
             self.connected = False
             raise
 
-        if self.buzzer_state == "1":
+        if self.buzzer_state == self.ON:
             return True
         else:
             return False
