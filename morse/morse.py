@@ -9,7 +9,7 @@ import select
 import time
 
 
-class wire():
+class Wire():
 
     PRESSED = "1"
     RELEASED = "0"
@@ -27,6 +27,7 @@ class wire():
         output = subprocess.check_output(
             'ip addr show | grep "inet " | grep -v "127.0.0.1"',
             shell=True)
+        output = output.decode('utf-8')
         prefix = output.split()[1]
         ipaddr = prefix.split('/')[0]
         return ipaddr
@@ -35,7 +36,7 @@ class wire():
         self.localip = self.get_local_ip()
         self.connected = False
         print("Your address is %s" % self.localip)
-        self.remoteip = raw_input("Please enter the other person's address: ")
+        self.remoteip = input("Please enter the other person's address: ")
 
         if role == self.UNSPECIFIED:
             # The user hasn't specified which role they want, so arbitrarily
@@ -109,11 +110,11 @@ class wire():
 
     @property
     def is_receiving(self):
-        return self._when_receiving
+        return self._is_receiving
 
     @is_receiving.setter
     def is_receiving(self, callback):
-        self._when_receiving = callback
+        self._is_receiving = callback
 
     @property
     def not_receiving(self):
@@ -122,10 +123,16 @@ class wire():
     @not_receiving.setter
     def not_receiving(self, callback):
         self._not_receiving = callback
-        
+
+    def send_signal(self):
+        self._signal_on_wire(self.ON)
+
+    def stop_signal(self):
+        self._signal_on_wire(self.OFF)
+
     # Function for the user code to call to tell us the state of its button.
     # Sends a signal to the other end whenever the button state changes.
-    def my_button(self, state):
+    def _signal_on_wire(self, state):
         if state != self.button_state:
             self.button_state = state
             # Attempt to send a message consisting of an ASCII digit to
@@ -171,22 +178,18 @@ class wire():
         else:
             return False
 
-    def listend_for_signal(self)
-    try:
-        while True:
-            ready = select.select([self.connection], [], [])
-            if ready[0]:
-                data = self.connection.recv(4096)
-                if data == self.ON:
-                    self._is_receiving()
-                else:
-                    self._not_receiving()
-    except:
-s        try:
-            self.sock.close()
-        finally:
-            self.connected = False
-    
-
-class LED():
-    
+    def listen_for_signal(self):
+        try:
+            while True:
+                ready = select.select([self.connection], [], [])
+                if ready[0]:
+                    data = self.connection.recv(4096)
+                    if data == self.ON:
+                        self._is_receiving()
+                    else:
+                        self._not_receiving()
+        except:
+            try:
+                self.sock.close()
+            finally:
+                self.connected = False
