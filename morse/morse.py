@@ -5,7 +5,6 @@
 import threading
 import subprocess
 import socket
-import errno
 import select
 import time
 
@@ -152,31 +151,6 @@ class Wire():
             except:
                 self.connected = False
                 raise
-
-    # Function for the user code to read the required state of their buzzer.
-    # Reads from the socket if there's anything to be read.
-    def my_buzzer(self):
-        try:
-            # Test whether there's anything to read - give it 20ms.
-            ready = select.select([self.connection], [], [], 0.05)
-            if ready[0]:
-                data = self.connection.recv(4096)
-                self.buzzer_state = data[-1:]
-        except socket.error:
-            print("Connection lost - retrying.")
-            self.connected = False
-            try:
-                self.sock.close()
-            finally:
-                self.connect()
-        except:
-            self.connected = False
-            raise
-
-        if self.buzzer_state == self.ON:
-            return True
-        else:
-            return False
 
     def listen_for_signal(self):
         try:
