@@ -2,7 +2,7 @@
 # Utility to communicate with another device running Python and
 #   - tell it whether to buzz or not
 #   - listen to it to decide whether we need to buzz or not at this end.
-
+import threading
 import subprocess
 import socket
 import select
@@ -54,13 +54,16 @@ class wire():
         self.button_state = self.RELEASED
         self.buzzer_state = self.OFF
 
-    # Connect to the other end.
+    # Connect to the other end and start listening.
     def connect(self):
         if not self.connected:
             if self.role == self.SERVER:
                 self.start_server()
             else:
                 self.start_client()
+
+        t = thread.Thread(task=self.listen_for_signal, args=())
+        t.start()
 
     # Start the connection, acting as server.
     def start_server(self):
@@ -104,6 +107,22 @@ class wire():
         print("Connected!")
         self.connection = self.sock
 
+    @property
+    def is_receiving(self):
+        return self._when_receiving
+
+    @is_receiving.setter
+    def is_receiving(self, callback):
+        self._when_receiving = callback
+
+    @property
+    def not_receiving(self):
+        return self._not_reeiving
+
+    @not_receiving.setter
+    def not_receiving(self, callback):
+        self._not_receiving = callback
+        
     # Function for the user code to call to tell us the state of its button.
     # Sends a signal to the other end whenever the button state changes.
     def my_button(self, state):
@@ -151,3 +170,23 @@ class wire():
             return True
         else:
             return False
+
+    def listend_for_signal(self)
+    try:
+        while True:
+            ready = select.select([self.connection], [], [])
+            if ready[0]:
+                data = self.connection.recv(4096)
+                if data == self.ON:
+                    self._is_receiving()
+                else:
+                    self._not_receiving()
+    except:
+s        try:
+            self.sock.close()
+        finally:
+            self.connected = False
+    
+
+class LED():
+    
