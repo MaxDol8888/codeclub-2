@@ -5,6 +5,7 @@
 import threading
 import subprocess
 import socket
+import errno
 import select
 import time
 
@@ -63,7 +64,7 @@ class Wire():
             else:
                 self.start_client()
 
-        t = thread.Thread(task=self.listen_for_signal, args=())
+        t = threading.Thread(target=self.listen_for_signal, args=())
         t.start()
 
     # Start the connection, acting as server.
@@ -95,9 +96,8 @@ class Wire():
             try:
                 self.sock.connect(server_address)
                 self.connected = True
-            except (socket.error, v):
-                errorcode = v[0]
-                if errorcode == socket.errno.ECONNREFUSED:
+            except socket.error as exp:
+                if exp.errno == socket.errno.ECONNREFUSED:
                     print("...waiting for the other end to start up...")
                     time.sleep(5)
                 else:
@@ -141,7 +141,7 @@ class Wire():
             # trying to kill the program with Ctrl-C) should be raised.
             try:
                 message = "%s" % self.button_state
-                self.connection.sendall(message)
+                self.connection.sendall(bytes(message, 'utf-8'))
             except socket.error:
                 print("Connection lost - retrying.")
                 self.connected = False
@@ -184,6 +184,8 @@ class Wire():
                 ready = select.select([self.connection], [], [])
                 if ready[0]:
                     data = self.connection.recv(4096)
+                    data = data.decode('utf-8')
+                    data = data[-1:]
                     if data == self.ON:
                         self._is_receiving()
                     else:
