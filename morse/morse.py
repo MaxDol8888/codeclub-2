@@ -34,7 +34,7 @@ class wire():
     def __init__(self, role=UNSPECIFIED):
         self.localip = self.get_local_ip()
         self.connected = False
-        print "Your address is %s" % self.localip
+        print("Your address is %s" % self.localip)
         self.remoteip = raw_input("Please enter the other person's address: ")
 
         if role == self.UNSPECIFIED:
@@ -71,9 +71,9 @@ class wire():
         self.sock.listen(1)
 
         # Wait for a connection
-        print 'Waiting for the other end to connect'
+        print("Waiting for the other end to connect")
         self.connection, self.client_address = self.sock.accept()
-        print 'Connected!'
+        print("Connected!")
         self.connected = True
 
     # Start the connection, acting as client.
@@ -81,7 +81,7 @@ class wire():
         # Connect a socket and attempt to connect to the server.
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = (self.remoteip, 10000)
-        print 'Connecting to the other end...'
+        print("Connecting to the other end...")
 
         # Keep trying until connected.  If the other end refuses the connection
         # then that probably means the other end just hasn't started up yet, so
@@ -91,17 +91,17 @@ class wire():
             try:
                 self.sock.connect(server_address)
                 self.connected = True
-            except socket.error, v:
+            except (socket.error, v):
                 errorcode = v[0]
                 if errorcode == socket.errno.ECONNREFUSED:
-                    print '...waiting for the other end to start up...'
+                    print("...waiting for the other end to start up...")
                     time.sleep(5)
                 else:
                     raise
             except:
                 raise
 
-        print 'Connected!'
+        print("Connected!")
         self.connection = self.sock
 
     # Function for the user code to call to tell us the state of its button.
@@ -117,7 +117,7 @@ class wire():
                 message = "%s" % self.button_state
                 self.connection.sendall(message)
             except socket.error:
-                print 'Connection lost - retrying.'
+                print("Connection lost - retrying.")
                 self.connected = False
                 try:
                     self.sock.close()
@@ -137,7 +137,7 @@ class wire():
                 data = self.connection.recv(4096)
                 self.buzzer_state = data[-1:]
         except socket.error:
-            print 'Connection lost - retrying.'
+            print("Connection lost - retrying.")
             self.connected = False
             try:
                 self.sock.close()
