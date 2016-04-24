@@ -3,7 +3,10 @@
 # can control.
 
 # Import Tkinter to do the graphics and the time package for the demo mode.
-import Tkinter
+try:
+    import Tkinter
+except:
+    import tkinter as Tkinter
 import time
 
 
