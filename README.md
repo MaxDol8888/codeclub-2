@@ -18,7 +18,11 @@ morse.py -  Set up a rudimentary Morse Code station which can connect to another
             a friend's computer.  Intended for use with Raspberry Pi, with a each person's
             Pi having a simple pair of circuits: one with a switch connection to a GPIO input
             and one with a buzzer connected to a GPIO output.  Press your switch and make the
-            other person's buzzer go off.
+            other person's buzzer go off.  Messages are automatically decoded and displayed on
+            screen.
+            
+            Decoder lifted from https://www.raspberrypi.org/learning/morse-code-virtual-radio/worksheet/
+            under Creative Commons (http://creativecommons.org/licenses/by-sa/4.0).
            
             To use it in another Python project (very basic example):
            
