@@ -7,7 +7,11 @@ import subprocess
 import socket
 import select
 import time
+from morse_lookup import *
 
+TIME_UNIT = 0.2
+LETTER_GAP = 3 * TIME_UNIT
+WORD_GAP = 7 * TIME_UNIT
 
 class Wire():
 
@@ -18,6 +22,8 @@ class Wire():
     SERVER = 1
     CLIENT = 2
     UNSPECIFIED = 3
+    DASH = "-"
+    DOT = "."
 
     # Gets the local IP address of the system.  Assumes there's only 1 IPv4
     # address which isn't the loopback address, and it only works with IPv4.
@@ -35,6 +41,8 @@ class Wire():
     def __init__(self, role=UNSPECIFIED):
         self.localip = self.get_local_ip()
         self.connected = False
+        self.key_up_time = 0
+        self.buffer = []
         print("Your address is %s" % self.localip)
         self.remoteip = input("Please enter the other person's address: ")
 
@@ -63,6 +71,8 @@ class Wire():
             else:
                 self.start_client()
 
+        decoder_t = threading.Thread(target=self.decoder_thread, args=())
+        decoder_t.start()
         t = threading.Thread(target=self.listen_for_signal, args=())
         t.start()
 
@@ -162,10 +172,31 @@ class Wire():
                     data = data[-1:]
                     if data == self.ON:
                         self._is_receiving()
+                        # Record time that the other person's button was pressed.
+                        key_down_time = time.time()
                     else:
                         self._not_receiving()
+                        # Record time that the other person's button was released.
+                        self.key_up_time = time.time()
+                        key_down_length = self.key_up_time - key_down_time
+                        self.buffer.append(self.DASH if key_down_length > TIME_UNIT else self.DOT)
         except:
             try:
                 self.sock.close()
             finally:
                 self.connected = False
+
+    def decoder_thread(self):
+        new_word = False
+        while True:
+            time.sleep(.01)
+            key_up_length = time.time() - self.key_up_time
+            if len(self.buffer) > 0 and key_up_length >= WORD_GAP:
+                new_word = True
+                bit_string = "".join(self.buffer)
+                try_decode(bit_string)
+                del self.buffer[:]
+            elif new_word and key_up_length >= 4.5:
+                new_word = False
+                sys.stdout.write(" ")
+                sys.stdout.flush()
