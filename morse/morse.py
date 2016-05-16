@@ -2,6 +2,12 @@
 # Utility to communicate with another device running Python and
 #   - tell it whether to buzz or not
 #   - listen to it to decide whether we need to buzz or not at this end.
+#
+# The decoding aspects of this utility (to automatically decode received
+# messages) are lifted from raspberrypi.org's learning resources.
+# https://www.raspberrypi.org/learning/morse-code-virtual-radio/worksheet
+# Provided under Creative Commons license
+# http://creativecommons.org/licenses/by-sa/4.0
 import threading
 import subprocess
 import socket
@@ -9,6 +15,9 @@ import select
 import time
 from morse_lookup import *
 
+# Set up some constants for the duration of a DOT.  This is the time unit
+# about which everything else is based.  If you get good at Morse code,
+# reduce the time unit.
 TIME_UNIT = 0.2
 LETTER_GAP = 3 * TIME_UNIT
 WORD_GAP = 7 * TIME_UNIT
