@@ -52,10 +52,24 @@ class Wire():
         self.connected = False
         self.key_up_time = 0
         self.buffer = []
+        self.is_receiving = None
+        self.not_receiving = None
+        self.role = role
+        self.test_mode = False
+        self.button_state = self.RELEASED
+        self.buzzer_state = self.OFF
+
+    # Connect to the other end and start listening.
+    def connect(self, self_test=True):
+        # By default we do a quick self-test so it's easy to see when people
+        # haven't wired up properly.
+        if self_test:
+            self.self_test()
+        
         print("Your address is %s" % self.localip)
         self.remoteip = input("Please enter the other person's address: ")
 
-        if role == self.UNSPECIFIED:
+        if self.role == self.UNSPECIFIED:
             # The user hasn't specified which role they want, so arbitrarily
             # choose who's going to be client and server by comparing the IP
             # addresses.
@@ -64,26 +78,22 @@ class Wire():
             # some testing and you want client and server roles on the same
             # system, with the same IP address
             if self.remoteip < self.localip:
-                role = self.SERVER
+                self.role = self.SERVER
             else:
-                role = self.CLIENT
-        self.role = role
+                self.role = self.CLIENT
+        self.reconnect()
 
-        self.button_state = self.RELEASED
-        self.buzzer_state = self.OFF
-
-    # Connect to the other end and start listening.
-    def connect(self):
+    def reconnect(self):        
         if not self.connected:
             if self.role == self.SERVER:
                 self.start_server()
             else:
                 self.start_client()
 
-        decoder_t = threading.Thread(target=self.decoder_thread, args=())
-        decoder_t.start()
-        t = threading.Thread(target=self.listen_for_signal, args=())
-        t.start()
+            decoder_t = threading.Thread(target=self.decoder_thread, args=())
+            decoder_t.start()
+            t = threading.Thread(target=self.listen_for_signal, args=())
+            t.start()
 
     # Start the connection, acting as server.
     def start_server(self):
@@ -96,7 +106,7 @@ class Wire():
         # Wait for a connection
         print("Waiting for the other end to connect")
         self.connection, self.client_address = self.sock.accept()
-        print("Connected!")
+        print("Connected!\n\n  PRESS CTRL-C TO STOP THE PROGRAM\n\n")
         self.connected = True
 
     # Start the connection, acting as client.
@@ -123,7 +133,7 @@ class Wire():
             except:
                 raise
 
-        print("Connected!")
+        print("Connected!\n\n  PRESS CTRL-C TO STOP THE PROGRAM\n\n")
         self.connection = self.sock
 
     @property
@@ -143,39 +153,42 @@ class Wire():
         self._not_receiving = callback
 
     def send_signal(self):
-        self._signal_on_wire(self.ON)
+        if self.test_mode:
+            # We're in test mode, so just print a message to say that the button
+            # was pushed ok.
+            print("Button press works.  Hooray.  Now release the button.")
+        else:
+            self._signal_on_wire(self.ON)
 
     def stop_signal(self):
-        self._signal_on_wire(self.OFF)
+        if self.test_mode:
+            # We're in test mode, so print a message to say that the button release
+            # has registered ok, and turn off the buzzer.
+            print("Button release works.  Hooray.  Turning buzzer off.")
+            self._not_receiving()
+            self.test_mode = False
+        else:
+            self._signal_on_wire(self.OFF)
 
     # Function for the user code to call to tell us the state of its button.
     # Sends a signal to the other end whenever the button state changes.
     def _signal_on_wire(self, state):
         if state != self.button_state:
             self.button_state = state
-            # Attempt to send a message consisting of an ASCII digit to
-            # represent the button state.  In the event of socket failure we
-            # should attempt to reconnect, but other exceptions (e.g. the user
-            # trying to kill the program with Ctrl-C) should be raised.
-            try:
-                message = "%s" % self.button_state
-                self.connection.sendall(bytes(message, 'utf-8'))
-            except socket.error:
-                print("Connection lost - retrying.")
-                self.connected = False
-                try:
-                    self.sock.close()
-                finally:
-                    self.connect()
-            except:
-                self.connected = False
-                raise
+            # Send a message consisting of an ASCII digit to
+            # represent the button state.
+            message = "%s" % self.button_state
+            self.connection.sendall(bytes(message, 'utf-8'))
 
     def listen_for_signal(self):
+        received_a_signal = False
         try:
             while True:
                 ready = select.select([self.connection], [], [])
                 if ready[0]:
+                    if not received_a_signal:
+                        print("Receiving OK")
+                        received_a_signal = True
                     data = self.connection.recv(4096)
                     data = data.decode('utf-8')
                     data = data[-1:]
@@ -190,10 +203,30 @@ class Wire():
                         key_down_length = self.key_up_time - key_down_time
                         self.buffer.append(self.DASH if key_down_length > TIME_UNIT else self.DOT)
         except:
-            try:
-                self.sock.close()
-            finally:
-                self.connected = False
+            self.sock.close()
+        finally:
+            self.connected = False
+
+    def self_test(self):
+        """Perform a self-test to make sure the button and buzzer are
+        correctly connected."""
+        all_good = True
+        # Set a flag to indicate to the functions triggered by the button that
+        # we're in test mode, so we don't really need to send signals - we
+        # just need to print a message and exit test mode.
+        self.test_mode = True
+        if self._is_receiving is None:
+            print ("You haven't set the wire's is_receiving function. Check the code")
+            all_good = False
+        if self._not_receiving is None:
+            print ("You haven't set the wire's not_receiving function. Check the code")
+            all_good = False
+        print("You should now hear your buzzer. If you don't, check your code and wiring")
+        self._is_receiving()
+        print("Push your button to turn the buzzer off.  If this doesn't work,\npress Ctrl-C to stop the program, then check your code and wiring.")
+
+        while self.test_mode:
+            pass
 
     def decoder_thread(self):
         new_word = False
